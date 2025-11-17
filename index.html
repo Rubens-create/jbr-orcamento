@@ -136,29 +136,40 @@
     
     window.addEventListener('DOMContentLoaded', carregarProdutos);
     
-    async function carregarProdutos() {
-      document.getElementById('loader').style.display = 'block';
-      try {
-        const response = await fetch(CONFIG.API_URL);
-        if (!response.ok) throw new Error(`Erro HTTP ${response.status}`);
-        const data = await response.json();
-        const produtos = Array.isArray(data) ? data : [data];
-        if (produtos.length === 0 || !produtos[0]?.Código) throw new Error('Nenhum produto válido na API.');
+async function carregarProdutos() {
+  document.getElementById('loader').style.display = 'block';
+  try {
+    const response = await fetch(CONFIG.API_URL);
+    if (!response.ok) throw new Error(`Erro HTTP ${response.status}`);
+    const data = await response.json();
+    const produtos = Array.isArray(data) ? data : [data];
+    if (produtos.length === 0 || !produtos[0]?.Código) throw new Error('Nenhum produto válido na API.');
 
-        window.productOptions = produtos.map(p => {
-          const valor = parseFloat(p['Valor venda'] || p.valor || 0);
-          return {
-            value: p.Código, label: `${p.Descrição} - R$ ${valor.toFixed(2)}`,
-            customProperties: { descricao: p.Descrição, valor: valor, unidade: p.Unidade }
-          };
-        });
-        document.getElementById('loader').style.display = 'none';
-        form.style.display = 'block';
-        adicionarLinhaDeProduto();
-      } catch (error) {
-        document.getElementById('loader').innerHTML = `<h3>⚠️ Erro ao carregar.</h3><p>${error.message}</p>`;
-      }
-    }
+    window.productOptions = produtos.map(p => {
+      // Pega os dados do produto, com fallbacks para garantir que funcionem
+      const descricao = p.Descrição || p.descricao || 'Produto sem nome';
+      const valor = parseFloat(p['Valor venda'] || p.valor || 0);
+      const unidade = p.Unidade || p.unidade || 'UN'; // Pega a unidade, com 'UN' como padrão
+
+      return {
+        value: p.Código || p.codigo,
+        label: `${descricao} - R$ ${valor.toFixed(2)} / ${unidade}`,
+        customProperties: { 
+            descricao: descricao, 
+            valor: valor, 
+            unidade: unidade 
+        }
+      };
+    });
+    
+    document.getElementById('loader').style.display = 'none';
+    form.style.display = 'block';
+    adicionarLinhaDeProduto();
+    
+  } catch (error) {
+    document.getElementById('loader').innerHTML = `<h3>⚠️ Erro ao carregar.</h3><p>${error.message}</p>`;
+  }
+}
     
     function adicionarLinhaDeProduto() {
         const rowId = `row-${Date.now()}`;
