@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pedido de Produtos</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+  <style>
+    :root {
+      --primary-color: #667eea;
+      --secondary-color: #764ba2;
+      --danger-color: #e74c3c;
+      --light-gray: #f8f9fa;
+      --dark-text: #333;
+    }
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+    
+    .container {
+      background: white; max-width: 800px; width: 100%; padding: 40px; border-radius: 16px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); margin: 20px 0;
+    }
+    
+    h1, h2, .subtitle { text-align: center; }
+    h1 { color: var(--dark-text); margin-bottom: 10px; font-size: 28px; }
+    h2 { color: var(--primary-color); margin-top: 30px; margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px; font-size: 20px; text-align: left;}
+    .subtitle { color: #666; margin-bottom: 30px; font-size: 14px; }
+    
+    .form-group { margin-bottom: 20px; }
+    label { display: block; margin-bottom: 8px; font-weight: 600; color: #444; font-size: 14px; }
+    input:not([type=button]), textarea { width: 100%; padding: 12px 16px; font-size: 16px; border: 2px solid #e0e0e0; border-radius: 8px; transition: all 0.3s ease; }
+    
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    
+    /* --- Estilos do Carrinho --- */
+    .product-list-header { display: grid; grid-template-columns: 6fr 1.5fr 40px; gap: 10px; padding: 0 10px 5px 10px; font-weight: bold; color: #555; border-bottom: 1px solid #ddd; margin-bottom: 10px; }
+    .product-row { display: grid; grid-template-columns: 6fr 1.5fr 40px; gap: 10px; align-items: flex-start; margin-bottom: 15px; }
+    .product-row .quantity-input { visibility: hidden; }
+    .product-row .remove-btn { background: var(--danger-color); color: white; border: none; border-radius: 8px; width: 40px; height: 40px; font-size: 20px; cursor: pointer; transition: all 0.2s ease; margin-top: 2px; }
+    .add-product-btn { width: 100%; padding: 12px 20px; background: rgba(102, 126, 234, 0.15); color: var(--primary-color); border: 2px dashed var(--primary-color); border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s ease; margin-top: 10px; }
+
+    /* --- Modal de Preview --- */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 20px;
+    }
+    .modal-content {
+      background: white; padding: 20px; border-radius: 8px; max-width: 840px; width: 100%; max-height: 95vh; overflow-y: auto; text-align: center;
+    }
+    .modal-content button {
+        padding: 12px 25px; font-size: 16px; border-radius: 8px; border: none; cursor: pointer; margin: 10px 5px;
+    }
+    #download-pdf-btn { background: var(--primary-color); color: white; }
+    #close-modal-btn { background: #ccc; }
+
+    /* --- Estilos para o Conteúdo do PDF --- */
+    #pdf-preview-content {
+      font-family: Arial, sans-serif; font-size: 10px; color: #000; text-align: left; padding: 20px; background: white;
+    }
+    #pdf-preview-content .pdf-header, .pdf-top-info { display: flex; justify-content: space-between; align-items: flex-start; }
+    #pdf-preview-content h1 { font-size: 14px; margin: 0; text-align: left; }
+    #pdf-preview-content p { margin: 2px 0; }
+    #pdf-preview-content table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 9px; }
+    #pdf-preview-content th, #pdf-preview-content td { border: 1px solid #000; padding: 4px; text-align: left; }
+    #pdf-preview-content th { background-color: #f0f0f0; }
+    #pdf-preview-content .section-title { font-weight: bold; margin-top: 15px; }
+    #pdf-preview-content .num { text-align: right; }
+    #pdf-preview-content .total-block { float: right; width: 250px; text-align: right; font-size: 10px; margin-top: 10px; }
+    #pdf-preview-content .total-block div { display: flex; justify-content: space-between; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🛒 Pedido de Produtos</h1>
+    <p class="subtitle">Preencha seus dados e adicione os produtos desejados.</p>
+    
+    <div id="loader" class="loader"><div class="spinner"></div><p>Carregando produtos...</p></div>
+    
+    <form id="form" style="display: none;">
+      <h2>👤 Dados do Cliente</h2>
+      <div class="row">
+        <div class="form-group"><label for="nome">Nome / Razão Social <span class="required">*</span></label><input type="text" id="nome" name="nome" required></div>
+        <div class="form-group"><label for="cpf_cnpj">CPF / CNPJ <span class="required">*</span></label><input type="text" id="cpf_cnpj" name="cpf_cnpj" required></div>
+      </div>
+      <div class="row">
+        <div class="form-group"><label for="email">E-mail <span class="required">*</span></label><input type="email" id="email" name="email" required></div>
+        <div class="form-group"><label for="telefone">Telefone <span class="required">*</span></label><input type="tel" id="telefone" name="telefone" required></div>
+      </div>
+      
+      <h2>🛍️ Itens do Pedido</h2>
+      <div class="product-list-header"><div>Produto</div><div>Quantidade</div></div>
+      <div id="productListContainer"></div>
+      <button type="button" id="addProductBtn" class="add-product-btn">➕ Adicionar Outro Produto</button>
+      <div id="orderSummary"></div>
+
+      <div class="form-group" style="margin-top: 30px;">
+        <label for="observacoes">Observações</label><textarea id="observacoes" name="observacoes" rows="3"></textarea>
+      </div>
+      <button type="submit" id="btnEnviar">✅ Visualizar e Enviar Pedido</button>
+    </form>
+  </div>
+
+  <!-- Modal para o Preview do PDF -->
+  <div id="preview-modal" class="modal-overlay">
+    <div class="modal-content">
+      <div id="pdf-preview-content">
+        <!-- O HTML do orçamento será injetado aqui -->
+      </div>
+      <button id="download-pdf-btn">Baixar Orçamento</button>
+      <button id="close-modal-btn">Fechar</button>
+    </div>
+  </div>
+
+  <!-- Bibliotecas JS -->
+  <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <script>
+    // --- Lógica do formulário (sem alterações significativas) ---
+    const CONFIG = { API_URL: 'https://n8n.jbrcastanhas.com.br/webhook/api-produtos' };
+    let choicesInstances = []; 
+    const form = document.getElementById('form');
+    // ... (O código de carregarProdutos, adicionarLinhaDeProduto e listeners de eventos do carrinho permanece o mesmo)
+    
+    window.addEventListener('DOMContentLoaded', carregarProdutos);
+    
+    async function carregarProdutos() {
+      document.getElementById('loader').style.display = 'block';
+      try {
+        const response = await fetch(CONFIG.API_URL);
+        if (!response.ok) throw new Error(`Erro HTTP ${response.status}`);
+        const data = await response.json();
+        const produtos = Array.isArray(data) ? data : [data];
+        if (produtos.length === 0 || !produtos[0]?.Código) throw new Error('Nenhum produto válido na API.');
+
+        window.productOptions = produtos.map(p => {
+          const valor = parseFloat(p['Valor venda'] || p.valor || 0);
+          return {
+            value: p.Código, label: `${p.Descrição} - R$ ${valor.toFixed(2)}`,
+            customProperties: { descricao: p.Descrição, valor: valor, unidade: p.Unidade }
+          };
+        });
+        document.getElementById('loader').style.display = 'none';
+        form.style.display = 'block';
+        adicionarLinhaDeProduto();
+      } catch (error) {
+        document.getElementById('loader').innerHTML = `<h3>⚠️ Erro ao carregar.</h3><p>${error.message}</p>`;
+      }
+    }
+    
+    function adicionarLinhaDeProduto() {
+        const rowId = `row-${Date.now()}`;
+        const productRow = document.createElement('div');
+        productRow.className = 'product-row';
+        productRow.id = rowId;
+        productRow.innerHTML = `<select></select><input type="number" class="quantity-input" min="1" value="1"><button type="button" class="remove-btn" data-row-id="${rowId}">×</button>`;
+        document.getElementById('productListContainer').appendChild(productRow);
+        
+        const newSelect = productRow.querySelector('select');
+        const choice = new Choices(newSelect, {
+            searchEnabled: true, itemSelectText: 'Selecionar', placeholderValue: 'Digite para buscar...',
+            choices: [{ value: '', label: 'Selecione um produto', selected: true, disabled: true }, ...window.productOptions]
+        });
+        newSelect.addEventListener('change', (e) => {
+            e.target.closest('.product-row').querySelector('.quantity-input').style.visibility = e.target.value ? 'visible' : 'hidden';
+        });
+        choicesInstances.push({ id: rowId, instance: choice });
+    }
+    
+    document.getElementById('addProductBtn').addEventListener('click', adicionarLinhaDeProduto);
+    document.getElementById('productListContainer').addEventListener('click', (e) => {
+        if (e.target.classList.contains('remove-btn')) {
+            const rowId = e.target.dataset.rowId; document.getElementById(rowId)?.remove();
+            const choiceIndex = choicesInstances.findIndex(c => c.id === rowId);
+            if (choiceIndex > -1) { choicesInstances[choiceIndex].instance.destroy(); choicesInstances.splice(choiceIndex, 1); }
+            if(document.getElementById('productListContainer').children.length === 0) adicionarLinhaDeProduto();
+        }
+    });
+
+    // --- NOVA LÓGICA DE SUBMISSÃO E GERAÇÃO DE PDF ---
+
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const btnEnviar = document.getElementById('btnEnviar');
+      btnEnviar.disabled = true;
+      btnEnviar.textContent = '⏳ Gerando...';
+
+      // 1. Coletar os dados do pedido
+      let itensPedido = [];
+      let valorTotal = 0;
+      choicesInstances.forEach(({ id, instance }) => {
+          const selectedItem = instance.getValue();
+          if (selectedItem && selectedItem.value) {
+              const props = selectedItem.customProperties;
+              const row = document.getElementById(id);
+              if (row) {
+                  const quantidade = parseInt(row.querySelector('.quantity-input').value) || 1;
+                  itensPedido.push({ ...props, produto_codigo: selectedItem.value, quantidade: quantidade });
+                  valorTotal += props.valor * quantidade;
+              }
+          }
+      });
+
+      if (itensPedido.length === 0) {
+          alert('Adicione pelo menos um produto ao pedido.');
+          btnEnviar.disabled = false; btnEnviar.textContent = '✅ Visualizar e Enviar Pedido';
+          return;
+      }
+      
+      const dadosPedido = {
+        nome: document.getElementById('nome').value, cpf_cnpj: document.getElementById('cpf_cnpj').value,
+        email: document.getElementById('email').value, telefone: document.getElementById('telefone').value,
+        observacoes: document.getElementById('observacoes').value,
+        data_pedido: new Date(), // Usar objeto Date para formatação
+        itens: itensPedido, valor_total: valorTotal
+      };
+      
+      // 2. Gerar HTML para o preview e injetar no modal
+      const previewHTML = gerarPreviewHTML(dadosPedido);
+      document.getElementById('pdf-preview-content').innerHTML = previewHTML;
+      
+      // 3. Exibir o modal
+      document.getElementById('preview-modal').style.display = 'flex';
+      
+      // 4. Enviar dados para o n8n em segundo plano
+      enviarParaWebhook(dadosPedido);
+
+      btnEnviar.disabled = false;
+      btnEnviar.textContent = '✅ Visualizar e Enviar Pedido';
+    });
+
+    function gerarPreviewHTML(dados) {
+        const formatarMoeda = (valor) => valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        
+        // Timezone de São Paulo
+        const dataOpts = { timeZone: 'America/Sao_Paulo' };
+        const dataFormatada = dados.data_pedido.toLocaleDateString('pt-BR', dataOpts);
+        const horaFormatada = dados.data_pedido.toLocaleTimeString('pt-BR', { ...dataOpts, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+        let linhasProdutosHTML = '';
+        dados.itens.forEach(item => {
+            const subTotal = item.valor * item.quantidade;
+            linhasProdutosHTML += `
+                <tr>
+                    <td>${item.produto_codigo}</td>
+                    <td>${item.descricao}</td>
+                    <td class="num">${formatarMoeda(item.quantidade)}</td>
+                    <td class="num">${formatarMoeda(item.valor)}</td>
+                    <td class="num">${formatarMoeda(subTotal)}</td>
+                    <td class="num">0,00</td>
+                    <td class="num">0,00</td>
+                    <td class="num">${formatarMoeda(subTotal)}</td>
+                </tr>
+            `;
+        });
+
+        return `
+            <div class="pdf-header">
+                <h1>JBR CASTANHAS</h1>
+                <p>Emissão ${dataFormatada} ${horaFormatada}</p>
+            </div>
+            <p class="section-title">PREVISÃO DE ENTREGA: ${dataFormatada}</p>
+            <p class="section-title">DADOS DO CLIENTE</p>
+            <table>
+                <tr><td style="width:50%;"><strong>CNPJ/CPF:</strong> ${dados.cpf_cnpj}</td><td><strong>E-mail:</strong> ${dados.email}</td></tr>
+                <tr><td><strong>Nome/Razão:</strong> ${dados.nome}</td><td><strong>Telefone:</strong> ${dados.telefone}</td></tr>
+            </table>
+            <p class="section-title">PRODUTOS</p>
+            <table>
+                <thead><tr><th>Referência</th><th>Produto</th><th class="num">Qtdade</th><th class="num">Valor unitário</th><th class="num">Sub Total</th><th class="num">Acréscimo</th><th class="num">Desconto</th><th class="num">Total</th></tr></thead>
+                <tbody>${linhasProdutosHTML}</tbody>
+            </table>
+            <div class="total-block">
+                <div><span>Total produto:</span> <span>${formatarMoeda(dados.valor_total)}</span></div>
+                <div><span>(-) Desconto:</span> <span>0,00</span></div>
+                <div><span>(+) Acrescimo:</span> <span>0,00</span></div>
+                <hr>
+                <div><strong>Total:</strong> <strong>${formatarMoeda(dados.valor_total)}</strong></div>
+            </div>
+        `;
+    }
+
+    async function enviarParaWebhook(dados) {
+        // Clonar e converter a data para string ISO para o webhook
+        const dadosParaWebhook = { ...dados, data_pedido: dados.data_pedido.toISOString() };
+        try {
+            await fetch(CONFIG.API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dadosParaWebhook)
+            });
+            console.log("Dados enviados para o webhook com sucesso.");
+        } catch (error) {
+            console.error("Erro ao enviar dados para o webhook:", error);
+        }
+    }
+
+    // --- Lógica do Modal e Download do PDF ---
+
+    const modal = document.getElementById('preview-modal');
+    document.getElementById('close-modal-btn').addEventListener('click', () => modal.style.display = 'none');
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) modal.style.display = 'none';
+    });
+
+    document.getElementById('download-pdf-btn').addEventListener('click', () => {
+        const btn = document.getElementById('download-pdf-btn');
+        btn.disabled = true;
+        btn.textContent = 'Baixando...';
+
+        const content = document.getElementById('pdf-preview-content');
+        
+        // Usar a biblioteca jspdf vinda da window
+        const { jsPDF } = window.jspdf;
+
+        html2canvas(content, { scale: 2 }).then(canvas => {
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
+            const ratio = canvasWidth / canvasHeight;
+            const width = pdfWidth - 20; // com margens
+            const height = width / ratio;
+
+            let position = 10; // margem superior
+            pdf.addImage(imgData, 'PNG', 10, position, width, height);
+            pdf.save('orcamento-jbr-castanhas.pdf');
+            
+            btn.disabled = false;
+            btn.textContent = 'Baixar Orçamento';
+        });
+    });
+  </script>
+</body>
+</html>
