@@ -75,6 +75,9 @@
     #pdf-preview-content .num { text-align: right; }
     #pdf-preview-content .total-block { float: right; width: 250px; text-align: right; font-size: 10px; margin-top: 10px; }
     #pdf-preview-content .total-block div { display: flex; justify-content: space-between; }
+    #btnEnviar {
+  margin-top: 30px; /* Mantém o espaçamento correto no final do formulário */
+}
   </style>
 </head>
 <body>
@@ -104,7 +107,7 @@
       <div class="form-group" style="margin-top: 30px;">
         <label for="observacoes">Observações</label><textarea id="observacoes" name="observacoes" rows="3"></textarea>
       </div>
-      <button type="submit" id="btnEnviar">✅ Visualizar e Enviar Pedido</button>
+      <button type="submit" id="btnEnviar" class="add-product-btn">✅ Visualizar e Enviar Pedido</button>
     </form>
   </div>
 
